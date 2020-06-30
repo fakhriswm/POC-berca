@@ -1,5 +1,8 @@
 #include "ble_scanning/ble_scanning.h"
 #include "notif/notif.h"
+#include "serial_debug/serial_debug.h"
+#define CHECK_BEACON_INTERVAL 5000
+
 
 extern notif notif;
 
@@ -20,18 +23,19 @@ uint8_t i = 0;
 float proximity = 0;
 int ble_timeout = 0; //in millisecond
 uint8_t detect_counter = 0;
+unsigned long previous_millis = 0;
 
 extern uint16_t iBeacon_self_minor;
 
 
 void ble_scanning :: ble_scan_init(){
-  Serial2.begin(115200);
+  NRFS.begin(115200);
   delay(100);
 }
 
 void ble_scanning :: read_ble(){
-  if(Serial2.available()){
-  char in=Serial2.read();
+  if(NRFS.available()){
+  char in=NRFS.read();
   if(in=='B'){
    rawData[0]=in;
    uint8_t sum = 0;
@@ -40,7 +44,7 @@ void ble_scanning :: read_ble(){
    
    for(i=1;i<=26;i++)
    {
-    rawData[i]=Serial2.read();
+    rawData[i]=NRFS.read();
     if(i>=2 && i<=24)sum+=rawData[i];
    }
    delay(10);
@@ -57,7 +61,6 @@ void ble_scanning :: read_ble(){
 
     uint16_t cardMinor=rawData[20];
     cardMinor=(cardMinor<<8) + rawData[21];
-    Serial.print((String)cardMinor+",");
     int rssi = rawData[22];
     rssi = ~rssi;
     rssi = rssi+B01;
@@ -66,18 +69,19 @@ void ble_scanning :: read_ble(){
 
     double rss = rssi;
     double distance = calculateDistance(rss);
-    Serial.println((String)distance+","+(String)rssi);
+    
     if(distance <= proximity /*&& cardMinor != iBeacon_self_minor*/){
       for(int k=0; k<NUMBEROFBEACON; k++){
                if(cardMinor == b[k].minor){
                 b[k].time = millis();
                 b[k].rss = rssi;
                 b[k].counter += 1;
-                Serial.print("Existing :"); Serial.print(b[k].minor); Serial.print("-"); Serial.print(b[k].counter); Serial.print("-"); Serial.println(b[k].time);
+                DEBUG_PRINT("Existing :"); DEBUG_PRINT(b[k].minor); DEBUG_PRINT("-"); DEBUG_PRINT(b[k].counter); DEBUG_PRINT("-"); DEBUG_PRINTLN(b[k].time);
                 if(b[k].counter == detect_counter && b[k].flag_detect == false){
                       b[k].flag_detect = true;
                       b[k].time = millis();
-                      Serial.println("access grant!");
+                      RS232_SEND_BEACON((String)uuid_lastdigit+"|"+(String)cardMajor+"|"+(String)cardMinor);
+                      DEBUG_PRINTLN("access grant!");
                       notif.notif_accessgrant();
                    }
                 return;
@@ -91,7 +95,7 @@ void ble_scanning :: read_ble(){
                 b[j].rss = rssi;
                 b[j].counter = 1;
                 b[j].flag_detect = false;
-                Serial.print("append success ->"); Serial.println(b[j].minor);
+                DEBUG_PRINT("append success ->"); DEBUG_PRINTLN(b[j].minor);
                 return;
             }
           }
@@ -119,9 +123,10 @@ double ble_scanning :: calculateDistance(double rssi) {
 
 void ble_scanning :: check_beacon(){
   unsigned long current_millis = millis();
+  if(current_millis-previous_millis>=CHECK_BEACON_INTERVAL){
     for(int j=0; j<NUMBEROFBEACON; j++){
      if(current_millis-b[j].time>ble_timeout && b[j].minor!=NULL){
-        Serial.print(b[j].minor); Serial.print("-"); Serial.println("out");
+        DEBUG_PRINT(b[j].minor); DEBUG_PRINT("-"); DEBUG_PRINTLN("out");
         b[j].major = 0;
         b[j].minor = 0;
         b[j].rss = 0;
@@ -130,7 +135,9 @@ void ble_scanning :: check_beacon(){
         b[j].flag_detect = false;
      }
      else if( b[j].minor!=NULL){
-        Serial.print(b[j].minor); Serial.print(" inrange with rssi = "); Serial.println(b[j].rss);
+        DEBUG_PRINT(b[j].minor); DEBUG_PRINT(" inrange with rssi = "); DEBUG_PRINTLN(b[j].rss);
      }
     }
+    previous_millis = current_millis;
+  }
 }

@@ -2,6 +2,7 @@
 #include <MFRC522.h>
 #include <SPI.h>
 #include "notif/notif.h"
+#include "serial_debug/serial_debug.h"
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
@@ -16,7 +17,7 @@ void mifare :: mifare_init(){
   mfrc522.PCD_Init();
   delay(100);  
   mfrc522.PCD_DumpVersionToSerial();
-  Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks...")); 
+  DEBUG_PRINTLN(F("Scan PICC to see UID, SAK, type, and data blocks...")); 
 }
 
 void mifare :: mifare_read(){
@@ -31,24 +32,24 @@ void mifare :: mifare_read(){
     
       if(rfid.length())
       {
-        Serial.println("rfid_tag: " + rfid);
+        DEBUG_PRINTLN("rfid_tag: " + rfid);
         readBlock(block, readbackblock);
-        Serial.println(master_key);
-        Serial.print("read block: ");
+        DEBUG_PRINTLN(master_key);
+        DEBUG_PRINT("read block: ");
         String key_access = "";
         for (int j=0 ; j<15 ; j++)
         {
           key_access += (char)readbackblock[j];
         }
-        Serial.println(key_access);
+        DEBUG_PRINTLN(key_access);
         mfrc522.PICC_HaltA();
         delay(1000);
         if(key_access == master_key){
-          Serial.println("Access granted!");
+          DEBUG_PRINTLN("Access granted!");
           notif.notif_accessgrant();
         }
         else{
-          Serial.println("Access rejected!");
+          DEBUG_PRINTLN("Access rejected!");
           notif.notif_accessreject();
        }
      }
@@ -69,7 +70,7 @@ String mifare :: read_rfid(){
         content.concat(String(mfrc522.uid.uidByte[i], HEX));
       }
       content.toUpperCase();    
-      Serial.println("found mifare card!");
+      DEBUG_PRINTLN("found mifare card!");
     }
   }
   return content;
@@ -86,8 +87,8 @@ int mifare :: readBlock(int blockNumber, byte arrayAddress[]){
   //authentication of the desired block for access
   status = (MFRC522::StatusCode)mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(mfrc522.uid));
   if (status != MFRC522::STATUS_OK) {
-         Serial.print("PCD_Authenticate() failed (read): ");
-         Serial.println(mfrc522.GetStatusCodeName(status));
+         DEBUG_PRINT("PCD_Authenticate() failed (read): ");
+         DEBUG_PRINTLN(mfrc522.GetStatusCodeName(status));
          return 3;//return "3" as error message
   }
 
@@ -95,9 +96,9 @@ int mifare :: readBlock(int blockNumber, byte arrayAddress[]){
 byte buffersize = 18;//we need to define a variable with the read buffer size, since the MIFARE_Read method below needs a pointer to the variable that contains the size... 
 status = (MFRC522::StatusCode)mfrc522.MIFARE_Read(blockNumber, arrayAddress, &buffersize);//&buffersize is a pointer to the buffersize variable; MIFARE_Read requires a pointer instead of just a number
   if (status != MFRC522::STATUS_OK) {
-          Serial.print("MIFARE_read() failed: ");
-          Serial.println(mfrc522.GetStatusCodeName(status));
+          DEBUG_PRINT("MIFARE_read() failed: ");
+          DEBUG_PRINTLN(mfrc522.GetStatusCodeName(status));
           return 4;//return "4" as error message
   }
-  Serial.println("block was read");
+  DEBUG_PRINTLN("block was read");
 }
