@@ -18,15 +18,19 @@ void wifi_manager :: setup_wifi_ap(){
 }
 
 void wifi_manager :: setup_wifi_sta(){
-  WiFi.disconnect();
+  disconnect_wifi();
   DEBUG_PRINT("Connecting to ");
   DEBUG_PRINTLN(sta_ssid);
-
   WiFi.begin(sta_ssid.c_str(), sta_passwrd.c_str());
-
+  uint8_t retry = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(50);
+    delay(1000);
     DEBUG_PRINT(".");
+    retry++;
+    if (retry>=50)
+    {
+      setup_wifi_sta();
+    }
   }
   DEBUG_PRINTLN("");
   DEBUG_PRINTLN("WiFi connected");
@@ -41,4 +45,8 @@ boolean wifi_manager :: wifi_status(){
   else{
     return true;
   }
+}
+
+void wifi_manager :: disconnect_wifi(){
+  WiFi.disconnect();
 }

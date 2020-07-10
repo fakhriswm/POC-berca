@@ -1,10 +1,10 @@
 #include "ble_scanning/ble_scanning.h"
-#include "notif/notif.h"
+#include "peripheral/peripheral.h"
 #include "serial_debug/serial_debug.h"
 #define CHECK_BEACON_INTERVAL 5000
 
 
-extern notif notif;
+extern periph periph;
 
 typedef struct BLE{
     int major;
@@ -29,7 +29,7 @@ extern uint16_t iBeacon_self_minor;
 
 
 void ble_scanning :: ble_scan_init(){
-  NRFS.begin(115200);
+  //NRFS.begin(115200);
   delay(100);
 }
 
@@ -76,13 +76,13 @@ void ble_scanning :: read_ble(){
                 b[k].time = millis();
                 b[k].rss = rssi;
                 b[k].counter += 1;
-                DEBUG_PRINT("Existing :"); DEBUG_PRINT(b[k].minor); DEBUG_PRINT("-"); DEBUG_PRINT(b[k].counter); DEBUG_PRINT("-"); DEBUG_PRINTLN(b[k].time);
+                DEBUG_PRINT("Existing :"); DEBUG_PRINT((String)b[k].minor); DEBUG_PRINT("-"); DEBUG_PRINT((String)b[k].counter); DEBUG_PRINT("-"); DEBUG_PRINTLN((String)b[k].time);
                 if(b[k].counter == detect_counter && b[k].flag_detect == false){
                       b[k].flag_detect = true;
                       b[k].time = millis();
                       RS232_SEND_BEACON((String)uuid_lastdigit+"|"+(String)cardMajor+"|"+(String)cardMinor);
                       DEBUG_PRINTLN("access grant!");
-                      notif.notif_accessgrant();
+                      periph.notif_accessgrant();
                    }
                 return;
               }
@@ -95,7 +95,7 @@ void ble_scanning :: read_ble(){
                 b[j].rss = rssi;
                 b[j].counter = 1;
                 b[j].flag_detect = false;
-                DEBUG_PRINT("append success ->"); DEBUG_PRINTLN(b[j].minor);
+                DEBUG_PRINT("append success ->"); DEBUG_PRINTLN((String)b[j].minor);
                 return;
             }
           }
@@ -126,7 +126,7 @@ void ble_scanning :: check_beacon(){
   if(current_millis-previous_millis>=CHECK_BEACON_INTERVAL){
     for(int j=0; j<NUMBEROFBEACON; j++){
      if(current_millis-b[j].time>ble_timeout && b[j].minor!=NULL){
-        DEBUG_PRINT(b[j].minor); DEBUG_PRINT("-"); DEBUG_PRINTLN("out");
+        DEBUG_PRINT((String)b[j].minor); DEBUG_PRINT("-"); DEBUG_PRINTLN("out");
         b[j].major = 0;
         b[j].minor = 0;
         b[j].rss = 0;
@@ -135,7 +135,7 @@ void ble_scanning :: check_beacon(){
         b[j].flag_detect = false;
      }
      else if( b[j].minor!=NULL){
-        DEBUG_PRINT(b[j].minor); DEBUG_PRINT(" inrange with rssi = "); DEBUG_PRINTLN(b[j].rss);
+        DEBUG_PRINT((String)b[j].minor); DEBUG_PRINT(" inrange with rssi = "); DEBUG_PRINTLN((String)b[j].rss);
      }
     }
     previous_millis = current_millis;

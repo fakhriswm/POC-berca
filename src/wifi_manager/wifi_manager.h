@@ -5,5 +5,6 @@ class wifi_manager{
     void setup_wifi_ap();
     void setup_wifi_sta();
     boolean wifi_status();
+    void disconnect_wifi();
 };
 

@@ -2,18 +2,19 @@
 #include "wifi_manager/wifi_manager.h"
 #include "ble_scanning/ble_scanning.h"
 #include "mifare_reader/mifare_reader.h"
+#include "serial_debug/serial_debug.h"
 
 AsyncWebServer myserver(80);
 extern flash flash;
 
-// extern String sta_ssid;
-// extern String sta_passwrd;
+extern String sta_ssid;
+extern String sta_passwrd;
 extern String ap_ssid;
 extern String ap_passwrd;
-// extern String backend_server;
-// extern String backend_username;
-// extern String backend_passwrd;
-// extern uint16_t backend_port;
+extern String backend_server;
+extern String backend_username;
+extern String backend_passwrd;
+extern uint16_t backend_port;
 extern float proximity;
 extern int ble_timeout;
 extern uint8_t detect_counter;
@@ -23,30 +24,30 @@ extern bool net_state;
 extern void reset_esp();
 
 String processor(const String& var){
-  // if(var == "STA_SSID"){
-  //   return sta_ssid.c_str();
-  // }
-  // else if(var == "STA_PASSWORD"){
-  //   return sta_passwrd.c_str();
-  // }
-  if(var == "AP_SSID"){
+  if(var == "STA_SSID"){
+    return sta_ssid.c_str();
+  }
+  else if(var == "STA_PASSWORD"){
+    return sta_passwrd.c_str();
+  }
+  else if(var == "AP_SSID"){
     return ap_ssid.c_str();
   }
   else if(var == "AP_PASSWORD"){
     return ap_passwrd.c_str();
   }
-  // else if(var == "MQTT_BROKER"){
-  //   return backend_server.c_str();
-  // }
-  // else if(var == "MQTT_USERNAME"){
-  //   return backend_username.c_str();
-  // }
-  // else if(var == "MQTT_PASSWORD"){
-  //   return backend_passwrd.c_str();
-  // }
-  // else if(var == "MQTT_PORT"){
-  //   return (String)backend_port;
-  // }
+  else if(var == "MQTT_BROKER"){
+    return backend_server.c_str();
+  }
+  else if(var == "MQTT_USERNAME"){
+    return backend_username.c_str();
+  }
+  else if(var == "MQTT_PASSWORD"){
+    return backend_passwrd.c_str();
+  }
+  else if(var == "MQTT_PORT"){
+    return (String)backend_port;
+  }
   else if(var == "PROXIMITY"){
     return (String)proximity;
   }
@@ -59,28 +60,28 @@ String processor(const String& var){
   else if(var == "MASTER_KEY"){
     return master_key.c_str();
   }
-  // else if(var == "NETSTATE"){
-  //   if(net_state){
-  //     return "CONNECTED";
-  //   }
-  //   else{
-  //     return "NOT CONNECTED";
-  //   }
-  // }
+  else if(var == "NETSTATE"){
+    if(net_state){
+      return "CONNECTED";
+    }
+    else{
+      return "NOT CONNECTED";
+    }
+  }
   return String();
 }
 
-// static void set_network_sta(AsyncWebServerRequest *request){
-//   if(request->arg("ssid") != NULL && request->arg("password") != NULL){
-//     sta_ssid = request->arg("ssid");
-//     sta_passwrd = request->arg("password");
-//     flash.set_sta(sta_ssid.c_str(),sta_passwrd.c_str());
-//     request->send(200, "text/html", "Setting station network success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
-//   }
-//   else{
-//     request->send(200, "text/html", "please enter SSID & Password completely");
-//   }
-// }
+static void set_network_sta(AsyncWebServerRequest *request){
+  if(request->arg("ssid") != NULL && request->arg("password") != NULL){
+    sta_ssid = request->arg("ssid");
+    sta_passwrd = request->arg("password");
+    flash.set_sta(sta_ssid.c_str(),sta_passwrd.c_str());
+    request->send(200, "text/html", "Setting station network success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+  }
+  else{
+    request->send(200, "text/html", "please enter SSID & Password completely");
+  }
+}
 
 static void set_network_ap(AsyncWebServerRequest *request){
   if(request->arg("ssid") != NULL && request->arg("password") != NULL){
@@ -94,19 +95,19 @@ static void set_network_ap(AsyncWebServerRequest *request){
   }
 }
 
-// static void set_backendserver(AsyncWebServerRequest *request){
-//   if(request->arg("mqtt_broker")&& request->arg("mqtt_username")&& request->arg("mqtt_password")&& request->arg("mqtt_port")){
-//     backend_server = request->arg("mqtt_broker");
-//     backend_username = request->arg("mqtt_username");
-//     backend_passwrd = request->arg("mqtt_password");
-//     backend_port = request->arg("mqtt_port").toInt();
-//     flash.set_backend(backend_server.c_str(), backend_username.c_str(), backend_passwrd.c_str(), backend_port);
-//     request->send(200, "text/html", "Setting Backend success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
-//   }
-//   else{
-//     request->send(200, "text/html", "please enter mqtt param completely");
-//   }
-// }
+static void set_backendserver(AsyncWebServerRequest *request){
+  if(request->arg("mqtt_broker")&& request->arg("mqtt_username")&& request->arg("mqtt_password")&& request->arg("mqtt_port")){
+    backend_server = request->arg("mqtt_broker");
+    backend_username = request->arg("mqtt_username");
+    backend_passwrd = request->arg("mqtt_password");
+    backend_port = request->arg("mqtt_port").toInt();
+    flash.set_backend(backend_server.c_str(), backend_username.c_str(), backend_passwrd.c_str(), backend_port);
+    request->send(200, "text/html", "Setting Backend success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+  }
+  else{
+    request->send(200, "text/html", "please enter mqtt param completely");
+  }
+}
 
 static void set_scanning_param(AsyncWebServerRequest *request){
   if(request->arg("proximity")&& request->arg("ble_timeout")&& request->arg("detect_counter")&& request->arg("master_key")){
@@ -153,9 +154,9 @@ static void reboot(AsyncWebServerRequest *request){
 void webserver :: webserver_start(){
   myserver.on("/", HTTP_GET, login);
   myserver.on("/home", HTTP_GET, homepage);
-  // myserver.on("/config/network_sta", HTTP_POST,set_network_sta);
+  myserver.on("/config/network_sta", HTTP_POST,set_network_sta);
   myserver.on("/config/network_ap", HTTP_POST,set_network_ap); 
-  // myserver.on("/config/backend", HTTP_POST,set_backendserver); 
+  myserver.on("/config/backend", HTTP_POST,set_backendserver); 
   myserver.on("/config/scanning", HTTP_POST,set_scanning_param);
   myserver.on("/reboot", HTTP_GET,reboot);
   myserver.on("/login", HTTP_POST, afterlogin);

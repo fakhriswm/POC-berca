@@ -1,12 +1,12 @@
 #include "mifare_reader/mifare_reader.h"
 #include <MFRC522.h>
 #include <SPI.h>
-#include "notif/notif.h"
+#include "peripheral/peripheral.h"
 #include "serial_debug/serial_debug.h"
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-extern notif notif;
+extern periph periph;
 
 unsigned long previousMillis = 0;
 uint8_t block = 2;
@@ -46,11 +46,12 @@ void mifare :: mifare_read(){
         delay(1000);
         if(key_access == master_key){
           DEBUG_PRINTLN("Access granted!");
-          notif.notif_accessgrant();
+          periph.notif_accessgrant();
+          RS232_SEND_MIFARE(rfid);
         }
         else{
           DEBUG_PRINTLN("Access rejected!");
-          notif.notif_accessreject();
+          periph.notif_accessreject();
        }
      }
    }
