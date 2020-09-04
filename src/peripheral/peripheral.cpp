@@ -39,7 +39,6 @@ void periph :: button_read(){
         buttonState = reading;
         if (buttonState == HIGH) {
             state = !state;
-            Serial.println("state : " + (String)state);
         }
     }
   }
@@ -74,4 +73,33 @@ void periph :: notif_network_connected(){
 }
 void periph :: notif_network_notconnected(){
   digitalWrite(LED1,false);
+}
+void periph :: notif_idle(){
+  notif_beep(1,50);
+}
+
+void periph :: timer_init(void (*f)(), uint32_t interval){
+  this->callback_func = f;
+	this->timer_interval = interval;
+
+  timer = timerBegin(0, 80, true);
+	timer_start(this->callback_func, this->timer_interval);
+  
+}
+
+void periph :: timer_pause()
+{
+	timerDetachInterrupt(timer);
+}
+
+void periph :: timer_start(void (*f)(), uint32_t interval)
+{
+	timerAttachInterrupt(timer, f, true);
+	timerAlarmWrite(timer, interval, true);
+	timerAlarmEnable(timer);
+}
+
+void periph :: timer_resume()
+{
+	timer_start(this->callback_func, this->timer_interval);
 }

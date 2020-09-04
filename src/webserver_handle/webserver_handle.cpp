@@ -20,7 +20,7 @@ extern int ble_timeout;
 extern uint8_t detect_counter;
 extern String master_key;
 
-extern bool net_state;
+extern wifi_sta_state_t wifi_sta_state;
 extern void reset_esp();
 
 String processor(const String& var){
@@ -29,12 +29,6 @@ String processor(const String& var){
   }
   else if(var == "STA_PASSWORD"){
     return sta_passwrd.c_str();
-  }
-  else if(var == "AP_SSID"){
-    return ap_ssid.c_str();
-  }
-  else if(var == "AP_PASSWORD"){
-    return ap_passwrd.c_str();
   }
   else if(var == "MQTT_BROKER"){
     return backend_server.c_str();
@@ -61,7 +55,7 @@ String processor(const String& var){
     return master_key.c_str();
   }
   else if(var == "NETSTATE"){
-    if(net_state){
+    if(wifi_sta_state){
       return "CONNECTED";
     }
     else{
@@ -71,12 +65,60 @@ String processor(const String& var){
   return String();
 }
 
+static void update_begin(AsyncWebServerRequest *request)
+{
+	bool update_error = Update.hasError();
+	AsyncWebServerResponse *response = request->beginResponse(
+			200, "text/plain", update_error ? "Update Fail" : "Update Success");
+	response->addHeader("Connection", "close");
+	request->send(response);
+  if(!update_error)
+  {
+    flash.set_idle_mode(false);
+  }
+	delay(1000);
+	ESP.restart();
+}
+
+static void update_proccess(
+	AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+	if(!index)
+	{
+		Serial.printf("Update Start: %s\n", filename.c_str());
+		if(!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH))
+		{
+			Update.printError(Serial);
+		}
+	}
+	if(!Update.hasError())
+	{
+		if(Update.write(data, len) != len)
+		{
+			Update.printError(Serial);
+		}
+	}
+	if(final)
+	{
+		if(Update.end(true))
+		{
+			Serial.printf("Update Success: %uB\n", index + len);
+      
+		}
+		else
+		{
+			Update.printError(Serial);
+		}
+	}
+}
+
+
 static void set_network_sta(AsyncWebServerRequest *request){
   if(request->arg("ssid") != NULL && request->arg("password") != NULL){
     sta_ssid = request->arg("ssid");
     sta_passwrd = request->arg("password");
     flash.set_sta(sta_ssid.c_str(),sta_passwrd.c_str());
-    request->send(200, "text/html", "Setting station network success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+    request->send(200, "text/html", "Setting station network success, please return home page and reboot soon! <br><a href=\"/\">Return to Home Page</a>");
   }
   else{
     request->send(200, "text/html", "please enter SSID & Password completely");
@@ -88,7 +130,7 @@ static void set_network_ap(AsyncWebServerRequest *request){
     ap_ssid = request->arg("ssid");
     ap_passwrd = request->arg("password");
     flash.set_ap(ap_ssid.c_str(),ap_passwrd.c_str());
-    request->send(200, "text/html", "Setting access point network success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+    request->send(200, "text/html", "Setting access point network success, please return home page and reboot soon! <br><a href=\"/\">Return to Home Page</a>");
   }
   else{
     request->send(200, "text/html", "please enter SSID & Password completely");
@@ -102,7 +144,7 @@ static void set_backendserver(AsyncWebServerRequest *request){
     backend_passwrd = request->arg("mqtt_password");
     backend_port = request->arg("mqtt_port").toInt();
     flash.set_backend(backend_server.c_str(), backend_username.c_str(), backend_passwrd.c_str(), backend_port);
-    request->send(200, "text/html", "Setting Backend success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+    request->send(200, "text/html", "Setting Backend success, please return home page and reboot soon! <br><a href=\"/\">Return to Home Page</a>");
   }
   else{
     request->send(200, "text/html", "please enter mqtt param completely");
@@ -119,7 +161,7 @@ static void set_scanning_param(AsyncWebServerRequest *request){
     detect_counter = request->arg("detect_counter").toInt();
     master_key = request->arg("master_key");
     flash.set_scanning( proximity, ble_timeout, detect_counter, master_key);
-    request->send(200, "text/html", "Setting scanning param success, please return home page and reboot soon! <br><a href=\"/home\">Return to Home Page</a>");
+    request->send(200, "text/html", "Setting scanning param success, please return home page and reboot soon! <br><a href=\"/\">Return to Home Page</a>");
   }
   else{
     request->send(200, "text/html", "please enter scanning parameter completely"); 
@@ -127,38 +169,25 @@ static void set_scanning_param(AsyncWebServerRequest *request){
 }
 
 static void homepage(AsyncWebServerRequest *request){
-  request->send_P(200, "text/html", index_html, processor);
-}
-
-static void login(AsyncWebServerRequest *request){
-  request->send_P(200, "text/html", login_html);
-}
-
-static void afterlogin(AsyncWebServerRequest *request){
-  String username = request->arg("username");
-  String password = request->arg("password");
-  if(username == "admin" && password == "admin"){
-   request->send_P(200, "text/html", index_html, processor);
-  }
-  else{
-    request->send(200, "text/html", "username and password invalid! <br><a href=\"/\">Return to Landing Page</a>");
-  }
-
+  request->send(SPIFFS, "/index.html", "text/html", false, processor);
 }
 
 static void reboot(AsyncWebServerRequest *request){
-  request->send(200, "text/html", "Hardware reboot, please wait for a while and reconnect again!");
+  request->send(200, "text/html", "Device rebooted");
+  flash.set_idle_mode(false);
+  delay(2000);
   ESP.restart();
 }
 
 void webserver :: webserver_start(){
-  myserver.on("/", HTTP_GET, login);
-  myserver.on("/home", HTTP_GET, homepage);
+
+  myserver.on("/", HTTP_GET, homepage);
   myserver.on("/config/network_sta", HTTP_POST,set_network_sta);
   myserver.on("/config/network_ap", HTTP_POST,set_network_ap); 
   myserver.on("/config/backend", HTTP_POST,set_backendserver); 
   myserver.on("/config/scanning", HTTP_POST,set_scanning_param);
   myserver.on("/reboot", HTTP_GET,reboot);
-  myserver.on("/login", HTTP_POST, afterlogin);
+  myserver.on("/update", HTTP_POST, update_begin, update_proccess);
   myserver.begin();
 }
+

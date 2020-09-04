@@ -6,6 +6,7 @@
 #include "device_code/device_code.h"
 #include "wifi_manager/wifi_manager.h"
 #include "serial_debug/serial_debug.h"
+#include "peripheral/peripheral.h"
 
 #define MQTT_CHECK_INTERVAL 10000
 #define TOKEN_LENGTH 6
@@ -19,6 +20,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 extern dev_code dev_code;
 extern wifi_manager wifi_manager;
+extern periph periph;
 
 String backend_server = "";
 String backend_username = "";
@@ -28,10 +30,6 @@ String pubs_topic = PUBS_TOPIC;
 String hb_topic = HB_TOPIC;
 uint16_t backend_port = 0;
 extern boolean net_state;
-
-unsigned long previous = 0;
-unsigned long previous_mill = 0;
-unsigned long connection_last_millis = 0;
 
 void mqtt :: mqtt_publish(String topic, String payload){
   client.publish(topic.c_str(),payload.c_str());
@@ -46,14 +44,16 @@ void mqtt_callback(char* topic, byte* payload, unsigned int len){
   payload_s = payload_s.substring(0,len);
 
   String pub = PUBS_TOPIC;
+  DEBUG_PRINTLN(topic_s);
   DEBUG_PRINTLN(payload_s);
- 
-  if(topic_s.substring(0,9) == HEAD_TOPIC){
-    String uuid = parse_string(payload_s, '|', 0);
-    String major = parse_string(payload_s, '|', 1);
-    String minor = parse_string(payload_s, '|', 2);
+
+  String uuid = parse_string(payload_s, '|', 0);
+  String major = parse_string(payload_s, '|', 1);
+  String minor = parse_string(payload_s, '|', 2);
+  if(uuid != NULL && major != NULL && minor != NULL){
     RS232_SEND_APP(uuid+"|"+major+"|"+minor);
-  }  
+    periph.notif_accessgrant();
+  }
 }
 
 void mqtt :: mqtt_init(){
@@ -102,16 +102,8 @@ void mqtt :: mqtt_reconnect(){
   }
 }
 
-void mqtt :: mqtt_loop(){
-    unsigned long current_millis = millis();
-    if(current_millis - previous_mill >= MQTT_CHECK_INTERVAL){
-        if(!client.loop()){
-            net_state = false;
-            mqtt_reconnect();
-        }
-        previous_mill = current_millis;
-        DEBUG_PRINTLN("MQTT check: " + (String)client.loop());
-    }
+boolean mqtt :: mqtt_loop(){
+    return client.loop();
 }
 
 void mqtt :: handle_newbeacon(String value){
@@ -119,10 +111,6 @@ void mqtt :: handle_newbeacon(String value){
   uint16_t minor = parse_string(value,',',1).toInt();
   String raw_uuid = parse_string(value,',',2);
   String uuid = "";
-  // iBeacon_stop();
-  // aes_encrypt(raw_uuid,uuid);
-  // iBeacon_set(major,minor,1000,uuid);
-  // iBeacon_start();
 }
 
 void mqtt :: append_beacon(String lastdigit_uuid, uint16_t major, uint16_t minor){
@@ -145,12 +133,12 @@ void mqtt :: append_mifare(String uid){
   serializeJson(json_doc,pub_data);
   mqtt_publish(pubs_topic,pub_data);
 }
-void mqtt :: send_hb(){
-  unsigned long current = millis();
-  if(current - previous >= 5000){
-    previous = current;
-    mqtt_publish(hb_topic,(String)dev_code.get_deviceNumber());
-  }
-}
+// void mqtt :: send_hb(){
+//   unsigned long current = millis();
+//   if(current - previous >= 5000){
+//     previous = current;
+//     mqtt_publish(hb_topic,(String)dev_code.get_deviceNumber());
+//   }
+// }
 
 

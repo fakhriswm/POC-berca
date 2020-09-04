@@ -1,4 +1,5 @@
 #include "ibeacon_adv/ibeacon_adv.h"
+#include "serial_debug/serial_debug.h"
 
 BLEAdvertising *pAdvertising;
 
@@ -11,9 +12,9 @@ void iBeacon :: iBeacon_init(){
 
 void iBeacon :: iBeacon_set(uint16_t major, uint16_t minor, uint16_t interval, String uuid) {
   iBeacon_change_endianess(uuid);
-  Serial.println("set uuid: " + uuid);
-  Serial.println("set major: " + String(major));
-  Serial.println("set minor: " + String(minor));
+  DEBUG_PRINTLN("set uuid: " + uuid);
+  DEBUG_PRINTLN("set major: " + String(major));
+  DEBUG_PRINTLN("set minor: " + String(minor));
   iBeacon_self_minor = minor;
   BLEBeacon oBeacon = BLEBeacon();
   oBeacon.setManufacturerId(0x4C00); // fake Apple 0x004C LSB (ENDIAN_CHANGE_U16!)
@@ -34,7 +35,7 @@ void iBeacon :: iBeacon_set(uint16_t major, uint16_t minor, uint16_t interval, S
   strServiceData += oBeacon.getData(); 
   oAdvertisementData.addData(strServiceData);
 
-  String short_name = "CBR"+(String)minor;
+  String short_name = "CAC"+(String)minor;
   oScanResponseData.setShortName(short_name.c_str());
   
   pAdvertising->setScanResponseData(oScanResponseData);
@@ -72,11 +73,11 @@ void iBeacon :: iBeacon_change_endianess(String& uuid_str)
 
 void iBeacon :: iBeacon_start(){
   pAdvertising->start();
-  Serial.println("Advertizing started...");
+  DEBUG_PRINTLN("Advertizing started...");
 }
 
 void iBeacon :: iBeacon_stop(){
   pAdvertising->stop();
-  Serial.println("Advertizing stop...");
+  DEBUG_PRINTLN("Advertizing stop...");
 }
   

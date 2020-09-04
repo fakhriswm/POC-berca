@@ -3,10 +3,13 @@
 #include <SPI.h>
 #include "peripheral/peripheral.h"
 #include "serial_debug/serial_debug.h"
+#include "FS_config/FS_config.h"
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 extern periph periph;
+extern flash flash;
+extern boolean idle_mode;
 
 unsigned long previousMillis = 0;
 uint8_t block = 2;
@@ -29,7 +32,7 @@ void mifare :: mifare_read(){
        
       String rfid = read_rfid();
       mfrc522.PCD_StopCrypto1();
-    
+        
       if(rfid.length())
       {
         DEBUG_PRINTLN("rfid_tag: " + rfid);
@@ -45,22 +48,32 @@ void mifare :: mifare_read(){
         mfrc522.PICC_HaltA();
         delay(1000);
         if(key_access == master_key){
-          DEBUG_PRINTLN("Access granted!");
-          periph.notif_accessgrant();
-          RS232_SEND_MIFARE(rfid);
-        }
-        else{
-          DEBUG_PRINTLN("Access rejected!");
+          if(idle_mode){
+            flash.set_idle_mode(false);
+            Serial.println("i");
+          }
+          else{
+            flash.set_idle_mode(true);
+            Serial.println("advertising activated");
+          }
           periph.notif_accessreject();
-       }
+          ESP.restart();
+        }
+        else
+        {
+          {
+            DEBUG_PRINTLN("found mifare card!");
+            RS232_SEND_MIFARE(rfid);
+            periph.notif_accessgrant();
+          }
+        }
+        
      }
    }
 }
 
 String mifare :: read_rfid(){
   String content = "";
-  byte letter;
-
   if (  mfrc522.PICC_IsNewCardPresent())
   {
     if (  mfrc522.PICC_ReadCardSerial())
@@ -71,7 +84,6 @@ String mifare :: read_rfid(){
         content.concat(String(mfrc522.uid.uidByte[i], HEX));
       }
       content.toUpperCase();    
-      DEBUG_PRINTLN("found mifare card!");
     }
   }
   return content;

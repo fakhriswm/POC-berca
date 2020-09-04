@@ -9,6 +9,7 @@
 #define CONF_AP_FILE "/conf_ap.json"
 #define CONF_BACKEND_FILE "/conf_mqtt.json"
 #define CONF_BLE_FILE "/conf_scanning.json"
+#define CONF_IDLE "/conf_idle.json"
 
 class flash{
   public :
@@ -23,6 +24,8 @@ class flash{
     void read_backend_conf();
     void read_scanning_conf();
     void config_all();
+    void set_idle_mode(boolean idle);
+    void read_idle_mode();
 };
 
 #endif

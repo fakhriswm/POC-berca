@@ -3,6 +3,7 @@
 #include "wifi_manager/wifi_manager.h"
 #include "ble_scanning/ble_scanning.h"
 #include "mifare_reader/mifare_reader.h"
+#include "serial_debug/serial_debug.h"
 
 String json = "";
 const char* json_value = "";
@@ -20,6 +21,7 @@ extern float proximity;
 extern int ble_timeout;
 extern uint8_t detect_counter;
 extern String master_key;
+extern boolean idle_mode;
 
 bool flash :: flash_init(){
   if(SPIFFS.begin(true)){
@@ -35,10 +37,10 @@ String open_spiff(String file_name){
   File file = SPIFFS.open(file_name);
 
   if(!file){
-    Serial.println("Failed to open file for reading");
+    DEBUG_PRINTLN("Failed to open file for reading");
     return "";
   }
-  Serial.println("File Content:");
+  DEBUG_PRINTLN("File Content:");
  
   while(file.available()){
     json += (char)file.read();
@@ -52,14 +54,14 @@ void flash :: write_spiff(String file_name, String json){
   File file = SPIFFS.open(file_name, FILE_WRITE);
  
     if(!file){
-        Serial.println("There was an error opening the file for writing");
+        DEBUG_PRINTLN("There was an error opening the file for writing");
         return;
     }
  
     if(file.print(json)){
-        Serial.println("File was written");
+        DEBUG_PRINTLN("File was written");
     } else {
-        Serial.println("File write failed");
+        DEBUG_PRINTLN("File write failed");
     }
  
     file.close();
@@ -122,7 +124,7 @@ void flash :: set_scanning(double distance,int timeout, uint8_t counter, String 
 
 void flash :: read_sta_conf(){
   String raw_json = open_spiff(CONF_STA_FILE);
-  Serial.println(raw_json);
+  DEBUG_PRINTLN(raw_json);
   deserializeJson(doc,raw_json);
   json_value = doc["sta_ssid"];
   sta_ssid = json_value;
@@ -132,7 +134,7 @@ void flash :: read_sta_conf(){
 
 void flash ::  read_ap_conf(){
   String raw_json = open_spiff(CONF_AP_FILE);
-  Serial.println(raw_json);
+  DEBUG_PRINTLN(raw_json);
   deserializeJson(doc,raw_json);
   json_value = doc["ap_ssid"];
   ap_ssid = json_value;
@@ -142,7 +144,7 @@ void flash ::  read_ap_conf(){
 
 void flash :: read_backend_conf(){
   String raw_json = open_spiff(CONF_BACKEND_FILE);
-  Serial.println(raw_json);
+  DEBUG_PRINTLN(raw_json);
   deserializeJson(doc,raw_json);
   json_value = doc["backend_server"];
   backend_server = json_value;
@@ -155,7 +157,7 @@ void flash :: read_backend_conf(){
 
 void flash :: read_scanning_conf(){
   String raw_json = open_spiff(CONF_BLE_FILE);
-  Serial.println(raw_json);
+  DEBUG_PRINTLN(raw_json);
   deserializeJson(doc,raw_json);
   proximity = doc["proximity"];
   ble_timeout = doc["ble_timeout"];
@@ -164,8 +166,26 @@ void flash :: read_scanning_conf(){
   master_key = json_value;
 }
 
+void flash :: set_idle_mode(boolean idle){
+  String raw_json = open_spiff(CONF_IDLE);
+  deserializeJson(doc,raw_json);
+  doc["idle"] = idle;
+  raw_json = "";
+  serializeJson(doc,raw_json);
+  write_spiff(CONF_IDLE,raw_json);
+}
+
+void flash ::  read_idle_mode(){
+  String raw_json = open_spiff(CONF_IDLE);
+  DEBUG_PRINTLN(raw_json);
+  deserializeJson(doc,raw_json);
+  idle_mode = (bool)doc["idle"];
+  DEBUG_PRINTLN("idle flag: " +(String)idle_mode);
+}
+
 void flash :: config_all(){
   read_backend_conf();
+  read_idle_mode();
   read_sta_conf(); 
   read_ap_conf(); 
   read_scanning_conf();

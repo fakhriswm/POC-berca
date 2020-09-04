@@ -29,7 +29,7 @@ extern uint16_t iBeacon_self_minor;
 
 
 void ble_scanning :: ble_scan_init(){
-  //NRFS.begin(115200);
+  NRFS.begin(115200);
   delay(100);
 }
 
@@ -54,7 +54,7 @@ void ble_scanning :: read_ble(){
         uuid[i]=rawData[i+2];
         uuidf+=uuid[i];
     }
-    sprintf(uuid_lastdigit,"%02x%02x",rawData[16],rawData[17]);
+    sprintf(uuid_lastdigit,"%02X%02X",rawData[16],rawData[17]);
             
     uint16_t cardMajor=rawData[18];
     cardMajor=(cardMajor<<8) + rawData[19];
@@ -70,7 +70,7 @@ void ble_scanning :: read_ble(){
     double rss = rssi;
     double distance = calculateDistance(rss);
     
-    if(distance <= proximity /*&& cardMinor != iBeacon_self_minor*/){
+    if(distance <= proximity && cardMinor != iBeacon_self_minor){
       for(int k=0; k<NUMBEROFBEACON; k++){
                if(cardMinor == b[k].minor){
                 b[k].time = millis();

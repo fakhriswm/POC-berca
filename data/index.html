@@ -1,27 +1,15 @@
-const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head><title>Cubeacon Reader</title></head>
 <body>
   <h1 style="color:blue;font-family:arial">READER CONFIG PAGE</h1>
   <h3>Netwok : %NETSTATE% </h3><br>
-  <h2>Device Configuration</h2><br>
-  <h3>Access Point Setting</h3>
-  <form  action = "/config/network_ap" method="post"> 
-    <table border= "0" >
-      <tr>
-        <td>AP SSID</td>
-        <td>: <input type="text" name="ssid" id="ssid" value=%AP_SSID%></td>
-      </tr>
-      <tr>
-        <td>AP Password</td>
-        <td>: <input type="password" name="password" id="password" value=%AP_PASSWORD%></td>
-      </tr>
-    </table>
-    <br>
-    <input type="submit" value="Save AP Network Config">
-  </form> 
-  <br>
+  <h3>Update Firmware</h3>
+  <form name=update_form method='POST' action='/update' enctype='multipart/form-data' onsubmit="return validate_update_form()" >
+	  <input type='file' name='update'><br>
+	  <input type='submit' value='Update'>
+  </form><br>
+  <h2>Device Configuration</h2>
   <h3>Station Setting</h3>
   <form action = "/config/network_sta" method="post"> 
     <table border= "0" >
@@ -61,10 +49,6 @@ const char index_html[] PROGMEM = R"rawliteral(
         <td>MQTT Port</td>
         <td>: <input type="number" name="mqtt_port" id="mqtt_port" value=%MQTT_PORT%></td>
       </tr>
-	 <tr>
-				<td><input type="radio" name="network_mode" id=dhcp value="DHCP" onchange="ip_form()"> DHCP<br></td>
-				<td><input type="radio" name="network_mode" id=static value="Static" onchange="ip_form()"> Static<br></td>
-			</tr>
     </table>
     <br>
     <input type="submit" value="Save Backend Config">
@@ -96,40 +80,5 @@ const char index_html[] PROGMEM = R"rawliteral(
 <p>
   <a href="/reboot"><button class="button">Reboot</button>
 </p>  
-
-<script type="text/javascript" >  
-
-</script> 
 </body>
-</html>)rawliteral";
 
-const char login_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Cubeacon Reader Login</title>
-</head>
-<body>
-  <h1 style="color:blue;font-family:arial">Cubeacon Reader Landing Page</h1>
-  <br>
-    <form action="/login" method="post">
-        <fieldset>
-        <legend>Login</legend>
-        <p>
-            <label>Username :</label>
-            <input type="text" name="username" placeholder="username..." />
-        </p>
-        <p>
-            <label>Password :</label>
-            <input type="password" name="password" placeholder="password..." />
-        </p>
-        <p>
-            <label><input type="checkbox" name="remember" value="remember" /> Remember me</label>
-        </p>
-        <p>
-            <input type="submit" name="submit" value="Login" />
-        </p>
-        </fieldset>
-    </form>
-</body>
-</html>)rawliteral";

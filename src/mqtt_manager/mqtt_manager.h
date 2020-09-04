@@ -12,7 +12,7 @@ class mqtt{
     void mqtt_publish(String topic, String payload);
     void handle_newbeacon(String value);
     void mqtt_reconnect();
-    void mqtt_loop();
+    boolean mqtt_loop();
     void append_beacon(String lastdigit_uuid, uint16_t major, uint16_t minor);
     void append_mifare(String uid);
     void send_hb();
